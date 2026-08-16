@@ -1,0 +1,34 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [],
+  "dev_command": "pnpm run dev",
+  "env_vars": {},
+  "experiments": null,
+  "git_remote": {
+    "repo_url": "https://7f0548f6b28a1758d9bf7be630d36cb4.artifacts.cloudflare.net/git/prod/mA5rSEiTscnm4ZYF32JoAg.git",
+    "expiration": "2026-08-17T10:11:51.526Z",
+    "token": "art_v2_x_1009269b38b7ef20dbf004ecb610fa4abfcf2e0e?expires=1786961511",
+    "backend": "GIT_BACKEND_ARTIFACTS"
+  },
+  "name": "buffalo688-clone",
+  "path": "/home/ubuntu/buffalo688-clone",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "LBLobDVVeEyB5EPUxBwEs9",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "HAKCAmKtbxcab5X9N4UckX",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "pyaephyo han",
+    "OWNER_OPEN_ID": "2rfXpnYCZTXqWgM6a7XEZy",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "825cfff1-6fdc-4d2b-962d-3e7a9de06822",
+    "VITE_APP_ID": "mA5rSEiTscnm4ZYF32JoAg",
+    "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663801557232/MSUaufyOPFWeltvm.png",
+    "VITE_APP_TITLE": "Buffalo688 Gaming Site",
+    "VITE_FRONTEND_FORGE_API_KEY": "N2C5kgjWKwtMkmcgjGwL9y",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-static",
+  "test_command": "pnpm test"
+}
