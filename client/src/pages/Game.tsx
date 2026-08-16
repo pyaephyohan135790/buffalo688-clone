@@ -9,6 +9,7 @@ import { Link, useLocation, useParams } from "wouter";
 import { ArrowLeft, Loader2, X, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { getGames, getGameUrl, type GameInfo } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { imageLinkGenerate } from "@/pages/Home";
 import AppShell from "@/components/AppShell";
 
@@ -57,6 +58,7 @@ const isBuffaloGame = (g: GameInfo) => {
 export default function Game() {
   const { provider = "jili", game: gameKey } = useParams<{ provider: string; game?: string }>();
   const [, navigate] = useLocation();
+  const { user } = useAuth();
   // Route → live API provider name (verified values: jili, pgsoft, fachai).
   const apiName = useMemo(() => {
     const key = String(provider).toLowerCase();
@@ -138,12 +140,15 @@ export default function Game() {
     setLaunchingId(g.gameID);
     setError(null);
     try {
-      // Original gameInit rewrites the provider before /games/url:
+      // Original gameInit: provider comes from the page's route query in the API's
+      // exact casing ("Jili", "Pragmatic", "PGSoft"...). Never send a normalized
+      // lowercase name — the backend maps the wrong game otherwise (e.g. /game/jili
+      // clicked → Pragmatic URL returned). Rewrite rules identical to original:
       // "Buffalo"===provider && 47===gameID → "Jili"; "FatPanda" → "Pragmatic".
-      let launchProvider = provider === "buffalo" ? g.provider : (apiProviderParam ?? g.provider);
-      if (g.gameID === "47") launchProvider = "Jili";
+      let launchProvider: string = g.provider;
       if (String(g.provider).toLowerCase() === "fatpanda") launchProvider = "Pragmatic";
-      const res = await getGameUrl({ gameID: g.gameID, provider: launchProvider });
+      if (String(g.provider).toLowerCase() === "buffalo" || g.gameID === "47") launchProvider = "Jili";
+      const res = await getGameUrl({ gameID: g.gameID, provider: launchProvider, userId: user?.id });
       const url = res?.data?.gameUrl ?? res?.data?.gameURL ?? null;
       if (url) {
         setGameUrl(url);

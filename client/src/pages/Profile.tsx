@@ -104,7 +104,10 @@ export default function Profile() {
                 <span className="text-[14px] font-bold text-[#e9eef8]">{user?.username ?? "—"}</span>
                 <BadgeCheck size={13} className="text-[#e3b24a]" />
               </div>
-              <div className="mt-0.5 text-[11px] text-[#7c87a6] font-num">ဖုန်းနံပါတ် {maskPhone(user?.phone)}</div>
+              <div className="mt-1 space-y-0.5 text-[11px] text-[#7c87a6] font-num">
+                <div>username: <span className="text-[#c3cbe7]">{user?.username ?? "—"}</span></div>
+                <div>ဖုန်းနံပာတ်: <span className="text-[#c3cbe7]">{user?.phone ? maskPhone(user.phone) : "—"}</span></div>
+              </div>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">

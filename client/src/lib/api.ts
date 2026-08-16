@@ -8,7 +8,11 @@ export const API_BASE = "https://api.buffalo688.net/api";
 
 function getToken(): string | null {
   try {
-    return localStorage.getItem("bf688_token");
+    return (
+      localStorage.getItem("bf688_token") ??
+      localStorage.getItem("token") ??
+      null
+    );
   } catch {
     return null;
   }
@@ -16,8 +20,16 @@ function getToken(): string | null {
 
 function setToken(token: string | null) {
   try {
-    if (token) localStorage.setItem("bf688_token", token);
-    else localStorage.removeItem("bf688_token");
+    if (token) {
+      // The original site (and the game backend api.buffalo688.net) store the
+      // bearer token under the exact key "token". Keep the clone key as an
+      // alias so both apps can read the same login session.
+      localStorage.setItem("bf688_token", token);
+      localStorage.setItem("token", token);
+    } else {
+      localStorage.removeItem("bf688_token");
+      localStorage.removeItem("token");
+    }
   } catch {
     /* noop */
   }
@@ -196,7 +208,7 @@ export interface GameInfo {
   is_close?: boolean;
 }
 
-export function getGameUrl(params: { gameID: string; provider: string }) {
+export function getGameUrl(params: { gameID: string; provider: string; userId?: string | number | null }) {
   return request<{ success?: boolean; data?: { gameUrl?: string; gameURL?: string }; message?: string; description?: string }>(
     "/games/url?" +
       Object.entries(params)

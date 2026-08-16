@@ -35,7 +35,6 @@ const CONFIG: Record<
     title: string;
     subtitle: string;
     tile: string;
-    gateMin: number;
     fetch: (
       u: { id: string; balance: number },
       refresh: () => void
@@ -46,7 +45,6 @@ const CONFIG: Record<
     title: "African Buffalo",
     subtitle: "နှုတ်ခွန်းဆိုသော ကျွန်းမင်း",
     tile: WELCOME_TILE,
-    gateMin: 1000,
     fetch: (_u, refresh) => {
       refresh();
       return getBuffaloData(true);
@@ -56,7 +54,6 @@ const CONFIG: Record<
     title: "Classic Buffalo",
     subtitle: "မူရင်း African Buffalo ဂိမ်း",
     tile: NEW_TILE,
-    gateMin: 1000,
     fetch: (_u, refresh) => {
       refresh();
       return getBuffaloData(false);
@@ -64,31 +61,31 @@ const CONFIG: Record<
   },
   forest: {
     title: "ကျွဲနီလေးခန်း",
-    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    subtitle: "",
+    // gate removed — original site allows entry regardless of balance
     tile: ASSETS.providers.forest,
-    gateMin: 1000,
     fetch: (u) => getForestData(u),
   },
   galangalu: {
     title: "ဂလုံး",
-    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    subtitle: "",
+    // gate removed — original site allows entry regardless of balance
     tile: ASSETS.providers.galone,
-    gateMin: 1000,
     fetch: (u) => getGalangaluData(u),
   },
   galone_galone: {
     title: "ဂလုံးဂလုံး",
-    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    subtitle: "",
+    // gate removed — original site allows entry regardless of balance
     tile: "/assets/tiles/lion_galone_galone.webp",
     // lion tile: authentic crop of the original site's lion room image (user screenshot)
-    gateMin: 1000,
     fetch: (u) => getGaloneGaloneData(u),
   },
   skm: {
     title: "ရှန်ကိုးမီး",
-    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    subtitle: "",
+    // gate removed — original site allows entry regardless of balance
     tile: ASSETS.providers.skm,
-    gateMin: 1000,
     fetch: (u, refresh) => {
       refresh();
       const nickname = String((u as any).username ?? (u as any).user_name ?? (u as any).name ?? (u as any).id ?? "");
@@ -97,9 +94,9 @@ const CONFIG: Record<
   },
   bugyee: {
     title: "ဘီကင်",
-    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    subtitle: "",
+    // gate removed — original site allows entry regardless of balance
     tile: ASSETS.providers.bgy,
-    gateMin: 1000,
     fetch: (u, refresh) => {
       refresh();
       const nickname = String((u as any).username ?? (u as any).user_name ?? (u as any).name ?? (u as any).id ?? "");
@@ -107,9 +104,6 @@ const CONFIG: Record<
     },
   },
 };
-
-const LOW_MSG = (min: number) =>
-  `${min.toLocaleString()} အောက်ရောက်နေပါသည်။ ငွေထပ်မံဖြည့်သွင်းပြီးမှ သည့်အခန်းကို ဆော့လို့ရပါမည်။`;
 
 /* ---------- shared full-screen iframe game player ---------- */
 function GamePlayer({ url, onExit, title }: { url: string; onExit: () => void; title: string }) {
@@ -170,10 +164,6 @@ export default function BuffaloRooms({ game }: { game?: string }) {
 
   async function openRoom() {
     const amount = Number(balance ?? 0);
-    if (amount < cfg.gateMin) {
-      setLimitMsg(LOW_MSG(cfg.gateMin));
-      return;
-    }
     if (!user) return;
     setLoading(true);
     setLimitMsg(null);
@@ -247,7 +237,7 @@ export default function BuffaloRooms({ game }: { game?: string }) {
         <div className="mt-3 rounded-xl overflow-hidden bg-[#101830] gold-border">
           <img src={cfg.tile} alt={cfg.title} loading="lazy" className="w-full aspect-square object-cover" />
           <div className="px-4 pb-4 text-center">
-            <p className="text-[13px] text-[#c6cfde] py-1.5">{cfg.subtitle}</p>
+            {cfg.subtitle ? <p className="text-[13px] text-[#c6cfde] py-1.5">{cfg.subtitle}</p> : null}
             <p className="text-[12px] text-[#7c87a6] pb-3">
               လက်ကျန် · <span className="text-[#e3b24a] font-semibold">{Number(balance).toLocaleString()}</span>
             </p>
