@@ -18,7 +18,6 @@ import Game from "./pages/Game";
 import Rooms from "./pages/Rooms";
 import BuffaloRooms from "./pages/BuffaloRooms";
 import { Deposit, Withdraw, TransactionHistory } from "./pages/Money";
-import BetHistory from "./pages/BetHistory";
 import Profile from "./pages/Profile";
 import OriginalHome from "./pages/OriginalHome";
 
@@ -75,11 +74,26 @@ function Router() {
       <Route path={"/game/:provider"}>
         <RequireAuth><Game /></RequireAuth>
       </Route>
-      <Route path={/^\/rooms\/(skm|bugyee)$/}>
-        <RequireAuth><Rooms /></RequireAuth>
+      <Route path={"/rooms/skm"}>
+        <RequireAuth><Rooms game="skm" /></RequireAuth>
       </Route>
-      <Route path={/^\/rooms\/(buffalo|buffalo_old|forest|galangalu|galone_galone)$/}>
-        <RequireAuth><BuffaloRooms /></RequireAuth>
+      <Route path={"/rooms/bugyee"}>
+        <RequireAuth><Rooms game="bugyee" /></RequireAuth>
+      </Route>
+      <Route path={"/rooms/buffalo"}>
+        <RequireAuth><BuffaloRooms game="buffalo" /></RequireAuth>
+      </Route>
+      <Route path={"/rooms/buffalo_old"}>
+        <RequireAuth><BuffaloRooms game="buffalo_old" /></RequireAuth>
+      </Route>
+      <Route path={"/rooms/forest"}>
+        <RequireAuth><BuffaloRooms game="forest" /></RequireAuth>
+      </Route>
+      <Route path={"/rooms/galangalu"}>
+        <RequireAuth><BuffaloRooms game="galangalu" /></RequireAuth>
+      </Route>
+      <Route path={"/rooms/galone_galone"}>
+        <RequireAuth><BuffaloRooms game="galone_galone" /></RequireAuth>
       </Route>
       <Route path={"/deposit"}>
         <RequireAuth><Deposit /></RequireAuth>
@@ -95,9 +109,6 @@ function Router() {
       </Route>
       <Route path={"/profile"}>
         <RequireAuth><Profile /></RequireAuth>
-      </Route>
-      <Route path={"/bet-history"}>
-        <RequireAuth><BetHistory /></RequireAuth>
       </Route>
       <Route path={"/original"}>
         <OriginalHome />

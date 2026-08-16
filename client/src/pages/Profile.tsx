@@ -119,31 +119,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ---------- Bet history summary (splay များ / အကိုးစုစုပေါင်း) ---------- */}
-        <div className="navy-card rounded-2xl p-4">
-          <div className="flex items-center gap-2">
-            <Wallet size={15} className="text-[#e3b24a]" />
-            <h3 className="text-[14px] font-bold text-[#e9eef8]">Betslip / ကစားမှတ်တမ်း</h3>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-[#0d1424] border border-[#22305a] px-3 py-2.5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a93b8]">စုစုပေါင်း ကစားငွေ</div>
-              <div className="mt-0.5 text-[15px] font-num font-extrabold text-[#f87171]">{formatMoney(totalBet)} <span className="text-[10px] text-[#7c87a6]">MMK</span></div>
-            </div>
-            <div className="rounded-xl bg-[#0d1424] border border-[#22305a] px-3 py-2.5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a93b8]">စုစုပေါင်း လှည့်လည်ငွေ</div>
-              <div className="mt-0.5 text-[15px] font-num font-extrabold text-[#60a5fa]">{formatMoney(turnOver)} <span className="text-[10px] text-[#7c87a6]">MMK</span></div>
-            </div>
-          </div>
-          <Link href="/bet-history" className="press mt-3 flex items-center justify-between rounded-xl bg-[#0d1424] border border-[#22305a] px-3.5 py-2.5">
-            <span className="text-[12px] font-semibold text-[#c3cbe7]">ကစားမှတ်တမ်း (Betslip) ကြည့်ရန်</span>
-            <ChevronRight size={14} className="text-[#e3b24a]" />
-          </Link>
-          <p className="mt-3 text-[11px] leading-relaxed text-[#7c87a6]">
-            မူရင််း site မှာပြတဲ့ ဘောက်ချာမှတ်တမ််း (ဂဏန််းပေါက်/ဘောလုံးတိုက်) ကို ထောက်ပံ့ထားပါတယ် — ယနေ့ ထိုးထားတဲ့ ဘောက်ချာရှိမှ ပြပါတယ်။
-          </p>
-        </div>
-
         {/* ---------- Quick access ---------- */}
         <div className="navy-card rounded-2xl px-2 py-3 flex items-center justify-between">
           {[
@@ -151,8 +126,7 @@ export default function Profile() {
             { label: "ငွေထုတ်", icon: Wallet, href: "/withdraw" },
             { label: "ပရိုမိုးရှင်း", icon: BadgeCheck, href: "/home" },
             { label: "ငွေစာရင််းများ", icon: Wallet, href: "/transaction" },
-            { label: "ကစားမှတ်တမ််း", icon: BadgeCheck, href: "/bet-history" },
-          ].map((q) => (
+                      ].map((q) => (
             <Link key={q.label} href={q.href} className="press flex w-1/4 flex-col items-center gap-1 py-1 active:scale-95 transition-transform">
               <span className="h-9 w-9 rounded-full bg-[#0d1424] gold-border flex items-center justify-center">
                 <q.icon size={15} className="text-[#e3b24a]" />

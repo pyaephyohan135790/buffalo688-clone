@@ -9,7 +9,7 @@
    Route: /rooms/:game (buffalo | forest | galangalu)
    ============================================================ */
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useParams } from "wouter";
+import { useLocation } from "wouter";
 import { ArrowLeft, Loader2, X, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -17,15 +17,17 @@ import {
   getForestData,
   getGalangaluData,
   getGaloneGaloneData,
+  getShanKoMeeData,
+  getBugyeeData,
   RoomData,
 } from "@/lib/api";
+import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
 
-const FOREST_TILE = "/assets/buffalo688_forest_e9072ff9.webp";
-const GALONE_TILE = "/assets/buffalo688_galone_81f7cf96.webp";
-const WELCOME_TILE = "/assets/buffalo688_welcom_buffalo_730008c8.webp";
-const NEW_TILE = "/assets/buffalo688_new_version_3d9494e1.webp";
+// Authentic tiles live on the original CDN via assets.providers / assets.hotTiles (assets.ts).
+const WELCOME_TILE = ASSETS.hotTiles.buffaloNewCard; // African Buffalo (new card tile)
+const NEW_TILE = ASSETS.hotTiles.arcade332; // African Buffalo (classic 332 tile)
 
 const CONFIG: Record<
   string,
@@ -61,25 +63,48 @@ const CONFIG: Record<
     },
   },
   forest: {
-    title: "တောဒိုက်ကောက်မီး ဘီကင်",
+    title: "ကျွဲနီလေးခန်း",
     subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
-    tile: FOREST_TILE,
+    tile: ASSETS.providers.forest,
     gateMin: 1000,
     fetch: (u) => getForestData(u),
   },
   galangalu: {
     title: "ဂလုံး",
     subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
-    tile: GALONE_TILE,
+    tile: ASSETS.providers.galone,
     gateMin: 1000,
     fetch: (u) => getGalangaluData(u),
   },
   galone_galone: {
     title: "ဂလုံးဂလုံး",
     subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
-    tile: GALONE_TILE,
+    tile: "/assets/tiles/lion_galone_galone.webp",
+    // lion tile: authentic crop of the original site's lion room image (user screenshot)
     gateMin: 1000,
     fetch: (u) => getGaloneGaloneData(u),
+  },
+  skm: {
+    title: "ရှန်ကိုးမီး",
+    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    tile: ASSETS.providers.skm,
+    gateMin: 1000,
+    fetch: (u, refresh) => {
+      refresh();
+      const nickname = String((u as any).username ?? (u as any).user_name ?? (u as any).name ?? (u as any).id ?? "");
+      return getShanKoMeeData({ id: u.id, level: 1, balance: u.balance, nickname });
+    },
+  },
+  bugyee: {
+    title: "ဘီကင်",
+    subtitle: "သည့်အခန်းဝင်ရန် အနည်းဆုံး 1,000 လိုအပ်ပါသည်",
+    tile: ASSETS.providers.bgy,
+    gateMin: 1000,
+    fetch: (u, refresh) => {
+      refresh();
+      const nickname = String((u as any).username ?? (u as any).user_name ?? (u as any).name ?? (u as any).id ?? "");
+      return getBugyeeData({ id: u.id, level: 1, balance: u.balance, nickname });
+    },
   },
 };
 
@@ -125,8 +150,7 @@ function GamePlayer({ url, onExit, title }: { url: string; onExit: () => void; t
   );
 }
 
-export default function BuffaloRooms() {
-  const { game } = useParams<{ game: string }>();
+export default function BuffaloRooms({ game }: { game?: string }) {
   const [, navigate] = useLocation();
   const { user, refreshBalance } = useAuth();
 
@@ -154,9 +178,13 @@ export default function BuffaloRooms() {
     setLoading(true);
     setLimitMsg(null);
     try {
+      const userName = String(user.username ?? user.name ?? user.user_name ?? "");
       const res = await cfg.fetch(
         {
-          id: String(user.username ?? user.name ?? user.user_name ?? ""),
+          id: userName,
+          username: userName,
+          user_name: userName,
+          name: userName,
           balance: amount,
         },
         refreshBalance

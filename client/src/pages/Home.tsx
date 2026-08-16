@@ -12,19 +12,23 @@ import { getHotGames, getGames, type GameInfo } from "@/lib/api";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
+import { ASSETS } from "@/lib/assets";
 
-const ROOMS = [
-  { id: "skm", label: "ရှန်းကိုးမီး", img: "/assets/skm_tile_1833f62e.png" },
-  { id: "bugyee", label: "ဘီကင်", img: "/assets/bgy_tile_87c1f9be.png" },
-  { id: "forest", label: "တောဒိုက်ကောက်မီး ဘီကင်", img: "/assets/buffalo688_forest_e9072ff9.webp" },
-  { id: "galangalu", label: "ဂလုံး", img: "/assets/buffalo688_galone_81f7cf96.webp" },
-  { id: "galone_galone", label: "ဂလုံးဂလုံး", img: "/assets/buffalo688_galone_81f7cf96.webp" },
+// Authentic rooms from the original site — verified tile images (original CDN)
+// and live launch APIs (/new-buffalo-data, /buffalo-data, /forest-data,
+// /galone-data, /galone-galone, /shankomee-data, /bugyee-new-data).
+const BUFFALO_ROOMS = [
+  { id: "buffalo", label: "African Buffalo", sub: "အသစ်", img: ASSETS.hotTiles.buffaloNewCard },
+  { id: "buffalo", label: "African Buffalo", sub: "အသစ်", img: ASSETS.hotTiles.buffaloNewCard },
+  { id: "buffalo_old", label: "African Buffalo", sub: "မူရင််း", img: ASSETS.hotTiles.arcade332 },
+  { id: "buffalo_old", label: "African Buffalo", sub: "မူရင််း", img: ASSETS.hotTiles.arcade332 },
 ];
 
-// Direct-launch African Buffalo tiles (original home nav: welcome buffalo + classic version).
-const BUFFALO_DIRECT = [
-  { id: "buffalo", label: "African Buffalo", sub: "အသစ်", img: "/assets/buffalo688_welcom_buffalo_730008c8.webp" },
-  { id: "buffalo_old", label: "Classic Buffalo", sub: "မူရင်း", img: "/assets/buffalo688_new_version_3d9494e1.webp" },
+const OTHER_ROOMS = [
+  { id: "forest", label: "ကျွဲနီလေးခန််း", img: ASSETS.providers.forest },
+  { id: "galangalu", label: "ဂလုံး", img: ASSETS.providers.galone },
+  { id: "galone_galone", label: "ဂလုံးဂလုံး", img: "/assets/tiles/lion_galone_galone.webp" },
+  { id: "skm", label: "ရှန််ကိုးမီး", img: ASSETS.providers.skm },
 ];
 
 const HERO = "/assets/hero-banner_60483ea8.png";
@@ -289,57 +293,38 @@ export default function Home() {
           <SectionTitle icon={Flame} title="နာမည်ကြီး ဂိမ်းများ" />
           <GameRow games={hot} hot />
 
-          {/* အခန်းများ (Rooms) — original ရှန်းကိုးမီး / ဘီကင် room games */}
-          <SectionTitle icon={Megaphone} title="အခန်းများ (Rooms)" />
-          <div className="grid grid-cols-2 gap-2.5 px-4">
-            {ROOMS.map((r) => (
-              <Link key={r.id} href={`/rooms/${r.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
-                <img src={r.img} alt={r.label} loading="lazy" className="w-full aspect-[3/4] object-cover" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
-                  <div className="text-center font-display font-bold text-[13px] text-[#ffd93c]">{r.label}</div>
-                </div>
-                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
-              </Link>
-            ))}
-          </div>
-
-          {/* African Buffalo direct-launch (မူရင််း home nav tiles) */}
-          <SectionTitle icon={Crown} title="African Buffalo လေးခန််း" />
-          <div className="grid grid-cols-2 gap-2.5 px-4">
-            {BUFFALO_DIRECT.map((b) => (
-              <Link key={b.id} href={`/rooms/${b.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
-                <img src={b.img} alt={b.label} loading="lazy" className="w-full aspect-square object-cover" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
-                  <div className="text-center font-display font-bold text-[14px] text-[#ffd93c]">{b.label}</div>
-                  <div className="text-center text-[9px] text-[#9fb0d4]">{b.sub}</div>
-                </div>
-                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
-                {b.sub === "အသစ်" && (
-                  <span className="pointer-events-none absolute top-1.5 left-1.5 rounded-sm bg-emerald-500 px-1 py-0.5 text-[8px] font-bold text-white shadow">
-                    အသစ်
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-
-          {/* Hot African Buffalo row — original screenshot style: 🔥 on all, အသစ် ribbon on first 2 */}
-          <SectionTitle icon={Flame} title="Hot African Buffalo" />
+          {/* Authentic African Buffalo rooms — original live tiles + live APIs */}
+          <SectionTitle icon={Crown} title="African Buffalo လေးခန်း" />
           <div className="grid grid-cols-4 gap-2.5 px-4">
-            {buffaloGames.slice(0, 8).map((g, i) => (
-              <div key={`${g.gameID}-${i}`} style={{ animationDelay: `${i * 40}ms` }} className="rise-in relative">
-                <GameCard game={g} hot />
+            {BUFFALO_ROOMS.map((b, i) => (
+              <Link key={`${b.id}-${i}`} href={`/rooms/${b.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
+                <img src={b.img} alt={b.label} loading="lazy" className="w-full aspect-[3/4] object-cover" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
+                  <div className="text-center font-display font-bold text-[12px] text-[#ffd93c]">{b.label}</div>
+                </div>
+                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
                 {i < 2 && (
                   <span className="pointer-events-none absolute top-1.5 left-1.5 rounded-sm bg-emerald-500 px-1 py-0.5 text-[8px] font-bold text-white shadow">
                     အသစ်
                   </span>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
 
-          <SectionTitle icon={Crown} title="ကျွဲဂိမ််းများ" />
-          <GameRow games={buffaloGames} hot />
+          {/* Other authentic rooms — original live tiles + live APIs */}
+          <SectionTitle icon={Megaphone} title="အခန်းများ (Rooms)" />
+          <div className="grid grid-cols-4 gap-2.5 px-4">
+            {OTHER_ROOMS.map((r) => (
+              <Link key={r.id} href={`/rooms/${r.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
+                <img src={r.img} alt={r.label} loading="lazy" className="w-full aspect-[3/4] object-cover" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
+                  <div className="text-center font-display font-bold text-[12px] text-[#ffd93c]">{r.label}</div>
+                </div>
+                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
+              </Link>
+            ))}
+          </div>
 
           <SectionTitle icon={Zap} title="စလော့ ဂိမ်းများ" />
           <GameRow games={slotGames} />
