@@ -211,6 +211,29 @@ export function getUserBank() {
   return request<{ success?: boolean; data?: { id?: number; type?: string; name?: string | null; account_number?: string | null } }>("/user_bank");
 }
 
+/**
+ * Withdraw on the Buffalo688 backend is the user's bank record UPDATE —
+ * verified against the live bundle 2026-08-16: PUT /api/user_bank with the
+ * full bank record; the withdrawn amount is placed in `account_number`.
+ * Responses: 200 {success:...} on acceptance; 500 "Please try again next 24
+ * hour!" when the user already withdrew within the last 24h; other 5xx/4xx
+ * with plain text messages.
+ */
+export function updateUserBank(bank: {
+  id?: number;
+  user_id?: number;
+  name?: string | null;
+  account_number?: string | number | null;
+  type?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}) {
+  return request<{ success?: string; message?: string }>("/user_bank", {
+    method: "PUT",
+    body: JSON.stringify(bank),
+  });
+}
+
 export function getAgentContact() {
   // The live bundle calls POST /user/agentcontact with an empty body and reads
   // data.{viber_number, telegram_username, telegram_name, agent_id}. The live API

@@ -4,7 +4,7 @@
    All pages use AppShell (header + balance hero + bottom nav).
    Ground truth (original app.js):
      DEPOSIT:   GET /accounts -> select card | POST /deposits {account_id, amount(>=3000), remark(last txn digits)}
-     WITHDRAW:  GET /user_bank -> own bank card | POST /withdraws {amount, remark, ...user bank fields}
+     WITHDRAW:  GET /user_bank -> own bank card | PUT /user_bank {full bank record, amount in account_number}
    ============================================================ */
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -22,11 +22,11 @@ import {
 import AppShell from "@/components/AppShell";
 import {
   createDeposit,
-  createWithdraw,
   getAccounts,
   getDepositHistory,
   getUserBank,
   getWithdrawHistory,
+  updateUserBank,
   type AgentAccount,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -333,21 +333,24 @@ export function Withdraw() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!accountName.trim()) return toast.error("အကောင့်နာမည် ထည့်ပေးပါ");
-    if (!phoneNumber.trim()) return toast.error("ဖုန်းနံပါတ် ထည့်ပေးပါ");
-    if (!amt || amt < 10000) return toast.error("ငွေထုတ်အနည်းဆုံး ၁၀,၀၀၀ ထည့်ပေးပါ");
+    if (!amt || amt < 1000) return toast.error("ငွေထုတ်ပမာဏ ထည့်ပေးပါ");
     if (amt > balance) return toast.error("အကောင့်ထဲတွင် ပိုက်ဆံအလုံအလောက် မရှိပါ");
     setSubmitting(true);
     try {
-      const res = await createWithdraw({
-        amount: amt,
-        type: method === "kpay" ? "Kpay" : "Wavepay",
+      // Original Buffalo688 withdraw = PUT /api/user_bank with the user's bank
+      // record; the amount goes into `account_number` (verified against the
+      // live bundle 2026-08-16).
+      const typeLabel =
+        method === "kpay" ? "KBZ Pay" : "Wave Pay";
+      const res = await updateUserBank({
+        id: bankInfo?.id ?? undefined,
+        user_id: bankInfo?.user_id ?? Number(useAuth().user?.id ?? 0),
         name: accountName.trim(),
-        account_number: phoneNumber.trim(),
+        account_number: String(amt),
         account_name: accountName.trim(),
-        remark: remark.trim() || undefined,
-        date: nowRangoon(),
-        lang: "my",
-        user_id: Number(useAuth().user?.id ?? 0),
+        type: typeLabel,
+        created_at: bankInfo?.created_at ?? null,
+        updated_at: bankInfo?.updated_at ?? null,
       });
       if (res?.success) {
         toast.success("ငွေထုတ် တင်ပြခဲ့ပြီး — စစ်ဆေးခံနေပါသည်");
@@ -369,21 +372,31 @@ export function Withdraw() {
       const serverMsg = (res as any)?.message ?? (res as any)?.errors ?? undefined;
       toast.error(serverMsg ? String(serverMsg) : "တင်ပြမရပါ — စနစ်ကို စစ်ဆေးနေပါသည်");
     } catch (err: any) {
-      const raw = err?.raw as { message?: string; errors?: Record<string, string> } | undefined;
-      const serverMsg = raw?.errors ? (Object.values(raw.errors)[0] ?? raw.message) : (raw?.message ?? "");
-      // Empty server body → poll history; the backend records the withdraw even on empty replies
-      if (!serverMsg) {
+      const raw = err?.raw;
+      let serverMsg = "";
+      if (typeof raw === "string") {
+        serverMsg = raw;
+      } else if (raw) {
+        const r = raw as { message?: string; errors?: Record<string, string> };
+        serverMsg = r.errors ? (Object.values(r.errors)[0] ?? r.message ?? "") : (r.message ?? "");
+      }
+      // 500 "Please try again next 24 hour!" = server cooldown; keep it friendly
+      if (err?.status === 500 && /24 hour/i.test(serverMsg)) {
+        toast.error("ယနေ့ ငွေထုတ်နိုင်သည့်အကြိမ် ပြည့်နေပါသည် — ၂၄ နာရီအကြာတွင် ထပ်မံကြိုးစားပါ");
+      } else if (serverMsg) {
+        toast.error(serverMsg);
+      } else {
+        // Empty/error server body → poll history; the backend may still record it
         const landed = await confirmByHistory("withdraw", Number(useAuth().user?.id ?? 0), amt);
         if (landed) {
           toast.success("ငွေထုတ် တင်ပြခဲ့ပြီး — စစ်ဆေးခံနေပါသည်");
           setAmount("");
-          setRemark("");
           await refreshBalance();
           navigate("/transaction");
           return;
         }
+        toast.error("ဆက်သွယ်ရေး အောင်မြင်မှုမရှိ — ကွန်ယက်စစ်ပြီး ပြန်ကြိုးစားပါ");
       }
-      toast.error(serverMsg || "ဆက်သွယ်ရေး အောင်မြင်မှုမရှိ — ကွန်ယက်စစ်ပြီး ပြန်ကြိုးစားပါ");
     } finally {
       setSubmitting(false);
     }
@@ -425,7 +438,8 @@ export function Withdraw() {
           <input className={inputCls} placeholder="အကောင့်နာမည် ထည့်ပေးပါ" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
           <div className="mt-4">
             <SectionHead icon={<PiggyBank size={15} className="text-[#e3b24a]" />} label="ဖုန်းနံပါတ်" />
-            <input className={inputCls} inputMode="tel" placeholder="09xxxxxxxxx" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+            <input className={inputCls} inputMode="tel" placeholder="09xxxxxxxxx" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} readOnly />
+            <p className="mt-1.5 text-[10px] leading-relaxed text-[#7c87a6]">ဖုန်းနံပာတ်သည် သင်၏ငွေထုတ်နာမည်/အကောင့်နာမည်အတိုင်း အကျော်းအလိုအလျောက် ပြင်ဆင်ထားပါသည်</p>
           </div>
           <div className="mt-4">
             <SectionHead icon={<PiggyBank size={15} className="text-[#e3b24a]" />} label="ထုတ်မည့်ပမာဏ" />
