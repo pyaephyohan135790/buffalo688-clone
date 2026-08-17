@@ -8,9 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { ArrowLeft, Loader2, X, Flame } from "lucide-react";
 import { toast } from "sonner";
-import { getGames, getGameUrl, type GameInfo } from "@/lib/api";
+import { getGames, getGameUrl, imageLinkGenerate, type GameInfo } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { imageLinkGenerate } from "@/pages/Home";
 import AppShell from "@/components/AppShell";
 
 // Route key → EXACT backend provider value. The backend query is case-sensitive
@@ -43,6 +42,12 @@ const LABELS: Record<string, string> = {
   card: "ဖဲ ဂိမ်းများ",
   "jili-fish": "ငါးပစ် ဂိမ်းများ",
   "jili-ac": "အာကိတ် ဂိမ်းများ",
+  "pp-live": "PP Live",
+  acewin: "AceWin ဂိမ်းများ",
+  fachai: "FaChai ဂိမ်းများ",
+  "acewin-fish": "AceWin ငါးပစ်",
+  "fachai-fish": "FaChai ငါးပစ်",
+  "twj-fish": "2J ငါးပစ်",
 };
 
 const BUFFALO_KEYS = ["bufking", "buf", "buffalo", "47charge", "crazybuffalo", "buffalowin"];

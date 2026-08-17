@@ -86,6 +86,9 @@ function Router() {
       <Route path={"/rooms/buffalo_old"}>
         <RequireAuth><BuffaloRooms game="buffalo_old" /></RequireAuth>
       </Route>
+      <Route path={"/rooms/buffalo-new"}>
+        <RequireAuth><BuffaloRooms game="buffalo_new" /></RequireAuth>
+      </Route>
       <Route path={"/rooms/forest"}>
         <RequireAuth><BuffaloRooms game="forest" /></RequireAuth>
       </Route>

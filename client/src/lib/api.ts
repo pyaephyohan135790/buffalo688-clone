@@ -188,24 +188,63 @@ export function getGames(params: { provider?: string; type?: string } = {}) {
 export function getHotGames() {
   // Live API sections (verified against original app.js fetchHotGames):
   // slotGames(35), fishingGames(12), arcadeGames(20)
+  // NOTE: original render reads `a.name` but the API returns `gameName` — map it.
   return request<{
     data?: {
       slotGames?: GameInfo[];
       fishingGames?: GameInfo[];
       arcadeGames?: GameInfo[];
     };
-  }>("/hot-games");
+  }>("/hot-games").then((res) => {
+    const data = res.data;
+    if (data) {
+      for (const list of [data.slotGames, data.fishingGames, data.arcadeGames]) {
+        if (Array.isArray(list)) {
+          for (const g of list) {
+            if (!g.name && g.gameName) g.name = g.gameName;
+          }
+        }
+      }
+    }
+    return res;
+  });
 }
 
 export interface GameInfo {
   id: number;
   gameID: string;
   gameName: string;
+  name?: string;
   gameTypeID: string;
   provider: string;
   technology?: string;
   aspectRatio?: string;
   is_close?: boolean;
+}
+
+const BF_CDN = "https://cdn.myanmarshankoeme.com/build/assets/img/bf688";
+const ST_CDN = "https://space-tech.sgp1.cdn.digitaloceanspaces.com";
+
+/** Exact replica of the original app.js imageLinkGenerate(gameID, provider). */
+export function imageLinkGenerate(game: GameInfo): string {
+  const provider = (game.provider ?? "").trim();
+  const id = String(game.gameID ?? "").trim();
+  if (!id) return "";
+  if (provider === "Jili") return `${BF_CDN}/jili/${id}.webp`;
+  if (provider === "Spade") return `${ST_CDN}/slot-images/spade/${id}.webp`;
+  if (provider === "Fastspin") return `http://api-egame-staging.fsuat.com/thumbnail/en_US/${id}.jpg`;
+  if (provider === "Playstar") return `https://yy24gld.sgp1.cdn.digitaloceanspaces.com/playstar/${id}.png`;
+  if (provider === "FaChai") return `${BF_CDN}/fachai/${id}_icon_300x500_mm.webp`;
+  if (provider === "PGSoft") return `${ST_CDN}/slot-images/pgsoft/${id}.webp`;
+  if (provider === "JOKER" || provider === "Joker") return `${ST_CDN}/slot-images/joker/${id}.webp`;
+  if (provider === "5G") return `https://yy24gld.sgp1.cdn.digitaloceanspaces.com/5g/${id}.png`;
+  if (provider === "KA") return `${ST_CDN}/slot-images/ka/${id}.webp`;
+  if (provider === "AceWin") return `${BF_CDN}/acewin/${id}_EN.webp`;
+  if (provider === "JDB") return `${ST_CDN}/slot-images/jdb/${id}.webp`;
+  if (provider === "2J") return `${BF_CDN}/2j/${id}.webp`;
+  if (provider === "HotDog") return `${BF_CDN}/hotdog/${id}.webp`;
+  // default — Pragmatic (original falls back to bf688/pp/{id}.webp)
+  return `${BF_CDN}/pp/${id}.webp`;
 }
 
 export function getGameUrl(params: { gameID: string; provider: string; userId?: string | number | null }) {

@@ -1,101 +1,81 @@
 /* ============================================================
-   Home — Midnight Vault
-   Banner carousel + category chips (2x3 bordered grid)
-   + game sections: နာမည်ကြီး / ကျွဲဂိမ်း / စလော့ / ဖဲ / ငါးပစ် / အာကိတ်
-   Live API: /hot-games (slotGames/fishingGames/arcadeGames)
-   Thumbnails: imageLinkGenerate (original logic) with fallback chain
+   Home — exact replica of m.buffalo688.net original app.js render:
+     1. Top strip: logo + balance/login block (AppShell)
+     2. Banner carousel from website-infos home_banners
+     3. Side-nav category tabs: hot / buffalo / card / fishing / arcade / slot (+ skm / bgy / football on original)
+     4. Room tiles: new_2_card x2 (new-buffalo-data), 332 x4 (buffalo-data), bufalo688_skm, buffalo688_galone, buffalo688_forest, pp-lc (PP Live)
+     5. Hot sections: popular_games (hotGames), popular_slot_games (slotGames),
+        popular_fishing_games (fishingGames), popular_arcade_games (arcadeGames)
+        with exact-case provider imageLinkGenerate + name labels
+   Live backend only — no fake tiles anywhere.
    ============================================================ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Flame, Zap, Sparkles, Rocket, Gamepad2, Fish, Crown, ChevronRight, Megaphone } from "lucide-react";
-import { getHotGames, getGames, type GameInfo } from "@/lib/api";
+import { Flame, ChevronRight, Swords, Castle, Fish, Rocket, Gamepad2, Landmark } from "lucide-react";
+import {
+  getHotGames,
+  getGames,
+  getWebsiteInfos,
+  imageLinkGenerate,
+  type GameInfo,
+} from "@/lib/api";
 import { toast } from "sonner";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
-import { ASSETS } from "@/lib/assets";
 
-// Authentic rooms from the original site — verified tile images (original CDN)
-// and live launch APIs (/new-buffalo-data, /buffalo-data, /forest-data,
-// /galone-data, /galone-galone, /shankomee-data, /bugyee-new-data).
-const BUFFALO_ROOMS = [
-  { id: "buffalo", label: "African Buffalo", sub: "အသစ်", img: ASSETS.hotTiles.buffaloNewCard },
-  { id: "buffalo", label: "African Buffalo", sub: "အသစ်", img: ASSETS.hotTiles.buffaloNewCard },
-  { id: "buffalo_old", label: "African Buffalo", sub: "မူရင််း", img: ASSETS.hotTiles.arcade332 },
-  { id: "buffalo_old", label: "African Buffalo", sub: "မူရင််း", img: ASSETS.hotTiles.arcade332 },
-];
-
-const OTHER_ROOMS = [
-  { id: "forest", label: "ကျွဲနီလေးခန််း", img: ASSETS.providers.forest },
-  { id: "galangalu", label: "ဂလုံး", img: ASSETS.providers.galone },
-  { id: "galone_galone", label: "ဂလုံးဂလုံး", img: "/assets/tiles/lion_galone_galone.webp" },
-  { id: "skm", label: "ရှန််ကိုးမီး", img: ASSETS.providers.skm },
-];
-
-const HERO = "/assets/hero-banner_60483ea8.png";
-const DARK_BG = "/assets/dark-bg_42856a18.png";
-
-/* ---------- thumbnail builder (EXACT replica of the original app.js imageLinkGenerate) ---------- */
 const BF_CDN = "https://cdn.myanmarshankoeme.com/build/assets/img/bf688";
-const ST = "https://space-tech.sgp1.cdn.digitaloceanspaces.com";
+const GT = "https://storage.googleapis.com/spacetech2/bf688";
 
-export function imageLinkGenerate(game: GameInfo): string {
-  const provider = (game.provider ?? "").trim();
-  const id = String(game.gameID ?? "").trim();
-  if (!id) return "";
-  if (provider === "Jili") return `${BF_CDN}/jili/${id}.webp`;
-  if (provider === "Spade") return `https://merchantapi.silverkirin88.com/thumbnail/en_US/${id}.jpg`;
-  if (provider === "Fastspin") return `http://api-egame-staging.fsuat.com/thumbnail/en_US/${id}.jpg`;
-  if (provider === "Playstar") return `https://yy24gld.sgp1.cdn.digitaloceanspaces.com/playstar/${id}.png`;
-  if (provider === "FaChai") return `${BF_CDN}/fachai/${id}_icon_300x500_mm.webp`;
-  if (provider === "PGSoft") return `${ST}/slot-images/pgsoft/${id}.webp`;
-  if (provider === "JOKER" || provider === "Joker") return `${ST}/slot-images/joker/${id}.webp`;
-  if (provider === "5G") return `https://yy24gld.sgp1.cdn.digitaloceanspaces.com/5g/${id}.png`;
-  if (provider === "KA") return `${ST}/slot-images/ka/${id}.webp`;
-  if (provider === "AceWin") return `${BF_CDN}/acewin/${id}_EN.webp`;
-  if (provider === "JDB") return `${ST}/slot-images/jdb/${id}.webp`;
-  if (provider === "Buffalo" && id === "47") return `${ST}/slot-images/jili/JL_400x540_GameID47_en-US.webp`;
-  if (provider === "FatPanda") return `https://api-2104.ppgames.net/game_pic/square/138/${id}.jpg`;
-  if (provider === "2J") return `${BF_CDN}/2j/${id}.webp`;
-  if (provider === "HotDog") return `${BF_CDN}/hotdog/${id}.webp`;
-  // default — Pragmatic/PP and anything else
-  return `${BF_CDN}/pp/${id}.webp`;
-}
+/* Original side-nav tabs (home view) in render order */
+const NAV_TABS = [
+  { id: "hot", label: "နာမည်ကြီး", img: `${BF_CDN}/buffalo_hot_games.webp`, color: "#eda394", icon: Flame },
+  { id: "buffalo", label: "အခန်းများ", img: `${BF_CDN}/buffalo688.webp`, color: "#eda394", icon: Castle },
+  { id: "card", label: "ဖဲ", img: `${BF_CDN}/pok3.webp`, color: "#cfa5a5", icon: Landmark },
+  { id: "fishing", label: "ငါးပစ်", img: `${BF_CDN}/smt223_fishing.png`, color: "#cfa5a5", icon: Fish },
+  { id: "arcade", label: "အာကိတ်", img: `${BF_CDN}/smt223_arcade.png`, color: "#cfa5a5", icon: Rocket },
+  { id: "slot", label: "စလော့", img: `${BF_CDN}/smt223_slot.png`, color: "#cfa5a5", icon: Gamepad2 },
+] as const;
 
-/* ---------- notice marquee ---------- */
-function NoticeBar() {
-  const msg = "Buffalo688 မှ လိုက်လျော့စွာကစားကြပါ။ ငွေသွင်း၊ ငွေထုတ် မှုတိုင်း အမြန်ဆုံး ဆောင်ရွက်ပေးပါသည်။";
-  return (
-    <div className="mx-4 mt-3 rounded-full bg-[#101830] gold-border flex items-center gap-2 pl-3 overflow-hidden">
-      <Megaphone size={14} className="text-[#e3b24a] shrink-0" />
-      <div className="flex-1 overflow-hidden whitespace-nowrap py-2">
-        <div className="marquee-track inline-block w-max">
-          {[0, 1].map((i) => (
-            <span key={i} className="text-[12px] text-[#c6cfde] pr-16">
-              {msg}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+type NavId = (typeof NAV_TABS)[number]["id"];
 
-/* ---------- section title ---------- */
-function SectionTitle({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string }) {
-  return (
-    <div className="flex items-center gap-2 px-4 pt-6 pb-3">
-      <span className="h-6 w-6 rounded-lg bg-[#16203d] gold-border flex items-center justify-center">
-        <Icon size={15} className="text-[#e3b24a]" />
-      </span>
-      <h2 className="font-display font-bold text-[15px] gold-text">{title}</h2>
-      <span className="flex-1 h-px bg-[#22305a]" />
-    </div>
-  );
-}
+/* Original room-grid tiles (buffalo nav) — exact images & handlers */
+const ROOM_TILES = [
+  { id: "buffalo_new", img: `${BF_CDN}/buffalo688_new_2_card.webp`, label: "African Buffalo အသစ်", target: "new" as const },
+  { id: "buffalo_new2", img: `${BF_CDN}/buffalo688_new_2_card.webp`, label: "African Buffalo အသစ်", target: "new" as const },
+  { id: "buffalo1", img: `${BF_CDN}/332.png`, label: "African Buffalo", target: null },
+  { id: "buffalo2", img: `${BF_CDN}/332.png`, label: "African Buffalo", target: null },
+  { id: "buffalo3", img: `${BF_CDN}/332.png`, label: "African Buffalo", target: null },
+  { id: "buffalo4", img: `${BF_CDN}/332.png`, label: "African Buffalo", target: null },
+];
 
-/* ---------- game card ---------- */
+/* Original other-room tiles (from buffalo/card nav, same layout) */
+const OTHER_ROOM_TILES = [
+  { id: "skm", img: `${BF_CDN}/bufalo688_skm.webp`, label: "ရှန််ကိုးမီး", route: "/rooms/skm" },
+  { id: "galangalu", img: `${BF_CDN}/buffalo688_galone.webp`, label: "ဂလုံး", route: "/rooms/galangalu" },
+  { id: "forest", img: `${BF_CDN}/buffalo688_forest.webp`, label: "ကျွဲနီလေးခန်း", route: "/rooms/forest" },
+  { id: "pp_live", img: `${GT}/pp-lc.webp`, label: "PP Live", route: "/game/pp-live" },
+];
+
+/* Original slot-nav provider strip (6 tiles → /game/<provider> routes) */
+const SLOT_NAV = [
+  { id: "pragmatic", img: `${BF_CDN}/smt223_pp.webp`, label: "PP" },
+  { id: "jili", img: `${BF_CDN}/smt223_jili.webp`, label: "JILI" },
+  { id: "hotdog", img: `${GT}/bff_hotdog_slot.webp`, label: "HotDog" },
+  { id: "fachai", img: `${GT}/bf688_fachai.webp`, label: "FaChai" },
+  { id: "acewin", img: `${GT}/bf688_acewin_slot.webp`, label: "AceWin" },
+  { id: "twj", img: `${GT}/bff_2j_slot.webp`, label: "2J" },
+] as const;
+
+/* Original fishing-nav provider strip (4 tiles) */
+const FISH_NAV = [
+  { id: "jili-fish", img: `${GT}/bf688_jili_fishing.webp`, label: "JILI ငါးပစ်" },
+  { id: "acewin-fish", img: `${GT}/bf688_acewin_fishing.webp`, label: "AceWin ငါးပစ်" },
+  { id: "fachai-fish", img: `${GT}/bf688_fc_fishing.webp`, label: "FaChai ငါးပစ်" },
+  { id: "twj-fish", img: `${GT}/bff_2j_fish.webp`, label: "2J ငါးပစ်" },
+] as const;
+
 const PROVIDER_KEY: Record<string, string> = {
-  Jili: "jili", Pragmatic: "pragmatic", PP: "pragmatic",
+  Jili: "jili", Pragmatic: "pragmatic", PP: "pragmatic", PP_Live: "pp-live",
   Joker: "joker", JOKER: "joker", JDB: "jdb",
   HotDog: "hotdog", "2J": "twj", "5G": "fiveg", Buffalo: "buffalo",
 };
@@ -107,82 +87,44 @@ function gameRouteKey(provider: string): string {
   return low || "jili";
 }
 
-function GameCard({ game, hot }: { game: GameInfo; hot?: boolean }) {
-  const [err, setErr] = useState(false);
+function HotSection({ icon, title, games }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string; games: GameInfo[] }) {
   return (
-    <Link
-      href={`/game/${gameRouteKey(game.provider)}/${encodeURIComponent(game.gameID)}`}
-      className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border"
-    >
-      <img
-        src={err ? `${imageLinkGenerate(game)}?${Date.now()}` : imageLinkGenerate(game)}
-        alt={game.gameName}
-        loading="lazy"
-        onError={() => setErr(true)}
-        className="w-full aspect-[3/4] object-cover"
-      />
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-6 pb-1.5">
-        <div className="text-[11px] font-medium text-white truncate">{game.gameName}</div>
-        <div className="text-[9px] text-[#9fb0d4] uppercase tracking-wide">{game.provider}</div>
+    <div className="col-12 p-0 py-1">
+      <div className="d-flex items-center gap-2 pb-1 px-1">
+        <img src={icon} alt="" className="mt-1" style={{ height: "2rem" }} />
+        <h4 className="text-nowrap m-0 font-bold" style={{ color: "#eda394", fontSize: "1.3rem", fontWeight: 700 }}>
+          {title}
+        </h4>
       </div>
-      {hot && (
-        <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
-      )}
-    </Link>
-  );
-}
-
-function GameRow({ games, hot }: { games: GameInfo[]; hot?: boolean }) {
-  return (
-    <div className="grid grid-cols-4 gap-2.5 px-4">
-      {games.map((g, i) => (
-        <div key={`${g.gameID}-${i}`} style={{ animationDelay: `${i * 40}ms` }} className="rise-in">
-          <GameCard game={g} hot={hot} />
-        </div>
-      ))}
+      <div className="d-flex flex-wrap">
+        {games.map((g, i) => (
+          <div key={`${g.gameID}-${i}`} className="col-3 px-1 my-2 rise-in">
+            <div className="pb-1">
+              <img
+                src={imageLinkGenerate(g)}
+                alt={g.gameName ?? g.name}
+                loading="lazy"
+                className="pl-1 pt-1 pr-1 w-100"
+                style={{ width: "100%", borderRadius: "10px", background: "#101830" }}
+              />
+              <div className="text-[11px] text-white truncate mt-0.5 px-1">{g.gameName ?? g.name}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-/* ---------- category chips (2x3 grid like original) ---------- */
-const CHIPS = [
-  { id: "hot", label: "နာမည်ကြီး", icon: Flame, emoji: "🔥" },
-  { id: "buffalo", label: "ကျွဲဂိမ်း", icon: Crown, emoji: "🐂" },
-  { id: "slot", label: "စလော့", icon: Zap, emoji: "🎰" },
-  { id: "card", label: "ဖဲ", icon: Sparkles, emoji: "🃏" },
-  { id: "fish", label: "ငါးပစ်", icon: Fish, emoji: "🐟" },
-  { id: "arcade", label: "အာကိတ်", icon: Rocket, emoji: "🚀" },
-];
-
-
-/* Provider strip under banner — like the original home navigation */
-// Original SPA provider values are case-sensitive (Jili, Pragmatic, HotDog, 2J, JDB...).
-// Only providers that actually have games on the backend are kept — the rest
-// returned 0 games and looked "fake".
-const PROVIDER_ROW = [
-  { id: "jili", label: "JILI", emoji: "🐉" },
-  { id: "pragmatic", label: "PP", emoji: "🎰" },
-  { id: "hotdog", label: "HotDog", emoji: "🌭" },
-  { id: "joker", label: "Joker", emoji: "🃏" },
-  { id: "jdb", label: "JDB", emoji: "🐯" },
-  { id: "twj", label: "2J", emoji: "🎲" },
-  { id: "jili-fish", label: "ငါးပစ်", emoji: "🐟" },
-  { id: "jili-ac", label: "အာကိတ်", emoji: "🚀" },
-];
-
-
 export default function Home() {
   const loggedIn = !!useAuth().user;
   const [, navigate] = useLocation();
-  const [hotSlots, setHotSlots] = useState<GameInfo[]>([]);
-  const [hotFish, setHotFish] = useState<GameInfo[]>([]);
-  const [hotArcade, setHotArcade] = useState<GameInfo[]>([]);
+  const [tab, setTab] = useState<NavId>("hot");
+  const [hotGames, setHotGames] = useState<{ slotGames: GameInfo[]; fishingGames: GameInfo[]; arcadeGames: GameInfo[] }>({ slotGames: [], fishingGames: [], arcadeGames: [] });
   const [slotGames, setSlotGames] = useState<GameInfo[]>([]);
-  const [fishGames, setFishGames] = useState<GameInfo[]>([]);
-  const [arcadeGames, setArcadeGames] = useState<GameInfo[]>([]);
-  const [buffaloGames, setBuffaloGames] = useState<GameInfo[]>([]);
-  const [cardGames, setCardGames] = useState<GameInfo[]>([]);
-  const [chip, setChip] = useState<string | null>(null);
+  const [allGames, setAllGames] = useState<GameInfo[]>([]);
+  const [banners, setBanners] = useState<string[]>([]);
+  const [bannerIdx, setBannerIdx] = useState(0);
   const done = useRef(false);
 
   useEffect(() => {
@@ -190,174 +132,295 @@ export default function Home() {
     done.current = true;
     (async () => {
       try {
-        const [live, all, fish, cards, buffalo] = await Promise.all([
+        const [live, slots, all, infos] = await Promise.all([
           getHotGames(),
           getGames({ provider: "Pragmatic" }),
-          getGames({ type: "fish", provider: "Jili" }),
-          getGames({ provider: "Pragmatic" }),
           getGames({}),
+          getWebsiteInfos().catch(() => null),
         ]);
-        // Live /hot-games rows (original home: hot slots, hot fishing, hot arcade)
-        setHotSlots(live?.data?.slotGames ?? []);
-        setHotFish(live?.data?.fishingGames ?? []);
-        setHotArcade(live?.data?.arcadeGames ?? []);
-        // Full live lists — identical query to the original SPA (exact provider casing)
-        const allGames = (all?.data ?? []) as GameInfo[];
-        setSlotGames(allGames.filter((g) => !g.is_close && String(g.gameTypeID) === "vs"));
-        setFishGames((fish?.data ?? []).filter((g) => !g.is_close));
-        setCardGames(
-          ((cards?.data ?? []) as GameInfo[]).filter(
-            (g) => !g.is_close && ["bj", "sc"].includes(String(g.gameTypeID).toLowerCase())
-          )
-        );
-        const buf = ((buffalo?.data ?? []) as GameInfo[]).filter(
-          (g) => !g.is_close && /buffalo|buff|charge buffalo/i.test(g.gameName ?? "")
-        );
-        setBuffaloGames(buf.length ? buf : (all?.data ?? []).slice(0, 8));
+        setHotGames({
+          slotGames: live?.data?.slotGames ?? [],
+          fishingGames: live?.data?.fishingGames ?? [],
+          arcadeGames: live?.data?.arcadeGames ?? [],
+        });
+        const s = (slots?.data ?? []) as GameInfo[];
+        setSlotGames(s.filter((g) => !g.is_close && String(g.gameTypeID) === "vs"));
+        setAllGames((all?.data ?? []) as GameInfo[]);
+        const b = infos?.data?.[0]?.home_banners;
+        if (Array.isArray(b) && b.length) setBanners(b);
       } catch (e) {
         toast.error("ဂိမ်းစာရင်း ရယူရာ မအောင်မြင်ပါ");
       }
     })();
   }, []);
 
-  const visible = useMemo(() => {
-    if (!chip) return null;
-    switch (chip) {
-      case "hot": return { title: "နာမည်ကြီး ဂိမ်းများ", games: hotSlots.slice(0, 20) };
-      case "buffalo": return { title: "ကျွဲဂိမ်းများ", games: buffaloGames };
-      case "slot": return { title: "စလော့ ဂိမ်းများ", games: slotGames };
-      case "card": return { title: "ဖဲ ဂိမ်းများ", games: cardGames };
-      case "fish": return { title: "ငါးပစ် ဂိမ်းများ", games: fishGames };
-      case "arcade": return { title: "အာကိတ် ဂိမ်းများ", games: arcadeGames };
-      default: return null;
-    }
-  }, [chip, hotSlots, buffaloGames, slotGames, cardGames, fishGames, arcadeGames]);
+  // Original banner carousel: rotate through home_banners
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const t = setInterval(() => setBannerIdx((i) => (i + 1) % banners.length), 5000);
+    return () => clearInterval(t);
+  }, [banners]);
+
+  const buffaloGames = useMemo(
+    () =>
+      allGames.filter(
+        (g) => !g.is_close && /buffalo|charge buffalo/i.test(g.gameName ?? g.name ?? "")
+      ),
+    [allGames]
+  );
+  const fishGames = useMemo(() => allGames.filter((g) => !g.is_close && String(g.gameTypeID) === "fish"), [allGames]);
+  const arcadeGames = useMemo(() => allGames.filter((g) => !g.is_close && String(g.gameTypeID) === "arcade"), [allGames]);
+  const cardGames = useMemo(
+    () => allGames.filter((g) => !g.is_close && ["bj", "sc"].includes(String(g.gameTypeID).toLowerCase())),
+    [allGames]
+  );
 
   return (
     <AppShell title="Buffalo688">
-      <NoticeBar />
-
-      {/* banner carousel */}
-      <div className="mx-4 mt-3 rounded-2xl overflow-hidden gold-border relative rise-in">
-        <img src={HERO} alt="Buffalo688 Daily Wins" className="w-full aspect-[21/9] object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14]/70 to-transparent" />
-        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-          <div>
-            <div className="font-display font-extrabold text-[15px] gold-text leading-tight">Daily Wins</div>
-            <div className="text-[11px] text-[#c6cfde]">မျှဝေပြီးဆုကြီးနေ့စဉ်ယူ</div>
+      {/* banner carousel — original website-infos home_banners */}
+      <div className="mx-4 mt-3 rounded-2xl overflow-hidden gold-border relative rise-in" style={{ background: "#101830" }}>
+        {banners.length ? (
+          <img src={banners[bannerIdx]} alt="Buffalo688" className="w-full aspect-[21/9] object-cover" />
+        ) : (
+          <div className="w-full aspect-[21/9] flex items-center justify-center gold-grad">
+            <span className="font-display font-extrabold text-[22px] text-[#1a1205]">BUFFALO688</span>
           </div>
-          <Link href="/register?code=SPD5Y8" className={`press px-3 py-1.5 rounded-full gold-grad text-[12px] font-bold text-[#1a1205] ${loggedIn ? "hidden" : ""}`}>
-            စာရင််းသွင််းရန်
-          </Link>
-        </div>
+        )}
+        {banners.length > 1 && (
+          <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1.5">
+            {banners.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setBannerIdx(i)}
+                className={`h-1.5 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1.5 bg-white/40"}`}
+              />
+            ))}
+          </div>
+        )}
+        <Link href="/register?code=SPD5Y8" className={`absolute bottom-3 right-3 press px-3 py-1.5 rounded-full gold-grad text-[12px] font-bold text-[#1a1205] ${loggedIn ? "hidden" : ""}`}>
+          စာရင်းသွင်းရန်
+        </Link>
       </div>
 
-      {/* category chips */}
-      {/* provider icon strip (original home sideNav: slots/fishing by provider) */}
-      <div className="mx-4 mt-4 grid grid-cols-4 gap-2">
-        {PROVIDER_ROW.map((p) => (
+      {/* category tabs — original sideNav order */}
+      <div className="mx-4 mt-4 grid grid-cols-6 gap-1.5">
+        {NAV_TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`press flex flex-col items-center gap-1 rounded-xl border px-1 py-2 transition-colors ${
+              tab === t.id ? "gold-grad border-transparent" : "border-[#22305a] bg-[#101830]"
+            }`}
+          >
+            {t.img ? (
+              <img src={t.img} alt={t.label} className="my-auto" style={{ width: "2rem" }} />
+            ) : (
+              <t.icon size={16} className={tab === t.id ? "text-[#1a1205]" : "text-[#e3b24a]"} />
+            )}
+            <span className={`text-[10px] font-medium truncate ${tab === t.id ? "text-[#1a1205] font-semibold" : "text-[#c6cfde]"}`}>
+              {t.label}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* provider strips under tabs */}
+      <div className="mx-4 mt-3 grid grid-cols-3 gap-2">
+        {SLOT_NAV.map((p) => (
           <button
             key={p.id}
             onClick={() => navigate(`/game/${p.id}`)}
-            className="press flex flex-col items-center gap-1 rounded-xl border border-[#22305a] bg-[#101830] px-2 py-2.5"
+            className="press rounded-xl overflow-hidden border border-[#22305a] bg-[#101830]"
           >
-            <span className="text-[16px]">{p.emoji}</span>
-            <span className="text-[11px] font-medium text-[#c6cfde]">{p.label}</span>
+            <img src={p.img} alt={p.label} className="w-full h-auto" style={{ borderRadius: "0.8rem" }} />
           </button>
         ))}
-      </div>
-
-      <div className="mx-4 mt-4 grid grid-cols-3 gap-2">
-        {CHIPS.map((c) => (
+        {FISH_NAV.map((p) => (
           <button
-            key={c.id}
-            onClick={() => {
-              const target: Record<string, string> = {
-                hot: "/",
-                buffalo: "/game/buffalo",
-                slot: "/game/pragmatic",
-                card: "/game/card",
-                fish: "/game/jili-fish",
-                arcade: "/game/jili-ac",
-              };
-              if (c.id === "hot") return setChip((v) => (v === c.id ? null : c.id));
-              navigate(target[c.id] ?? "/");
-            }}
-            className={`press flex items-center gap-1.5 rounded-xl border px-2.5 py-2.5 transition-colors ${
-              chip === c.id
-                ? "gold-grad text-[#1a1205] border-transparent font-semibold"
-                : "border-[#22305a] bg-[#101830] text-[#c6cfde]"
-            }`}
+            key={p.id}
+            onClick={() => navigate(`/game/${p.id}`)}
+            className="press rounded-xl overflow-hidden border border-[#22305a] bg-[#101830]"
           >
-            <span className="text-[14px]">{c.emoji}</span>
-            <span className="text-[12px] font-medium truncate">{c.label}</span>
+            <img src={p.img} alt={p.label} className="w-full h-auto" style={{ borderRadius: "0.8rem" }} />
+          </button>
+        ))}
+        {OTHER_ROOM_TILES.map((r) => (
+          <button
+            key={r.id}
+            onClick={() => navigate(r.route)}
+            className="press rounded-xl overflow-hidden border border-[#22305a] bg-[#101830]"
+          >
+            <img src={r.img} alt={r.label} className="w-full h-auto" style={{ borderRadius: "0.8rem" }} />
           </button>
         ))}
       </div>
 
-      {visible && (
-        <>
-          <SectionTitle icon={Gamepad2} title={visible.title} />
-          {visible.games.length ? (
-            <GameRow games={visible.games} />
-          ) : (
-            <div className="px-4 py-8 text-center text-[13px] text-[#7c87a6]">ဂိမ်းမရှိသေးပါ</div>
-          )}
-        </>
-      )}
+      <div className="pb-24">
+        {tab === "hot" && (
+          <>
+            <HotSection
+              icon={`${BF_CDN}/buffalo_hot_games.webp`}
+              title="နာမည်ကြီး ဂိမ်းများ"
+              games={hotGames.slotGames}
+            />
+            <HotSection
+              icon={`${BF_CDN}/smt223_hot_fishing.png`}
+              title="နာမည်ကြီး ငါးပစ် ဂိမ်းများ"
+              games={hotGames.fishingGames}
+            />
+            <HotSection
+              icon={`${BF_CDN}/smt223_hot_arcade.png`}
+              title="နာမည်ကြီး အာကိတ် ဂိမ်းများ"
+              games={hotGames.arcadeGames}
+            />
+          </>
+        )}
 
-      {!visible && (
-        <>
-          <SectionTitle icon={Flame} title="နာမည်ကြီး ဂိမ်းများ (Slots)" />
-          <GameRow games={hotSlots} hot />
-          <SectionTitle icon={Fish} title="နာမည်ကြီး ငါးပစ် ဂိမ်းများ" />
-          <GameRow games={hotFish} hot />
-          <SectionTitle icon={Rocket} title="နာမည်ကြီး အာကိတ် ဂိမ်းများ" />
-          <GameRow games={hotArcade} hot />
+        {tab === "buffalo" && (
+          <>
+            <div className="flex flex-wrap px-1 pt-2">
+              {ROOM_TILES.map((r) => (
+                <img
+                  key={r.id}
+                  src={r.img}
+                  alt={r.label}
+                  loading="lazy"
+                  onClick={() => navigate(`/rooms/buffalo${r.target === "new" ? "-new" : ""}`)}
+                  className="my-2 px-1 press"
+                  style={{ cursor: "pointer", width: "23.5%", height: "auto", borderRadius: "0.8rem", boxSizing: "border-box" }}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap px-1">
+              {OTHER_ROOM_TILES.slice(0, 3).map((r) => (
+                <img
+                  key={r.id}
+                  src={r.img}
+                  alt={r.label}
+                  loading="lazy"
+                  onClick={() => navigate(r.route)}
+                  className="my-2 px-1 press"
+                  style={{ cursor: "pointer", width: "23.5%", height: "auto", borderRadius: "0.8rem", boxSizing: "border-box" }}
+                />
+              ))}
+              <img
+                src={`${BF_CDN}/bufalo688_skm.webp`}
+                alt="ရှန််ကိုးမီး"
+                loading="lazy"
+                onClick={() => navigate("/rooms/skm")}
+                className="my-2 px-1 press"
+                style={{ cursor: "pointer", width: "23.5%", height: "auto", borderRadius: "0.8rem", boxSizing: "border-box" }}
+              />
+            </div>
+            <HotSection icon={`${BF_CDN}/smt223_hot_slot.png`} title="စလော့ ဂိမ်းများ" games={slotGames} />
+            <HotSection icon={`${BF_CDN}/smt223_hot_fishing.png`} title="ငါးပစ် ဂိမ်းများ" games={fishGames} />
+            <HotSection icon={`${BF_CDN}/smt223_hot_arcade.png`} title="အာကိတ် ဂိမ်းများ" games={arcadeGames} />
+          </>
+        )}
 
-          {/* Authentic African Buffalo rooms — original live tiles + live APIs */}
-          <SectionTitle icon={Crown} title="African Buffalo လေးခန်း" />
-          <div className="grid grid-cols-4 gap-2.5 px-4">
-            {BUFFALO_ROOMS.map((b, i) => (
-              <Link key={`${b.id}-${i}`} href={`/rooms/${b.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
-                <img src={b.img} alt={b.label} loading="lazy" className="w-full aspect-[3/4] object-cover" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
-                  <div className="text-center font-display font-bold text-[12px] text-[#ffd93c]">{b.label}</div>
-                </div>
-                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
-                {i < 2 && (
-                  <span className="pointer-events-none absolute top-1.5 left-1.5 rounded-sm bg-emerald-500 px-1 py-0.5 text-[8px] font-bold text-white shadow">
-                    အသစ်
-                  </span>
-                )}
-              </Link>
+        {tab === "card" && (
+          <>
+            <div className="flex flex-wrap px-1 pt-2">
+              {["/rooms/skm", "/rooms/bugyee", "/rooms/forest", "/rooms/galangalu"].map((route, i) => {
+                const imgs = [
+                  `${BF_CDN}/smt223_skm.webp`,
+                  `${BF_CDN}/smt223_bgy.webp`,
+                  `${BF_CDN}/smt223_forest.webp`,
+                  `${BF_CDN}/smt223_galone.webp`,
+                ];
+                const labels = ["ရှန််ကိုးမီး", "ဘီကင်", "ကျွဲနီလေးခန်း", "ဂလုံး"];
+                return (
+                  <img
+                    key={route}
+                    src={imgs[i]}
+                    alt={labels[i]}
+                    loading="lazy"
+                    onClick={() => navigate(route)}
+                    className="my-2 px-0 mx-0 press"
+                    style={{ cursor: "pointer", width: "24%", height: "auto", borderRadius: "0.8rem" }}
+                  />
+                );
+              })}
+              <img
+                src={`${GT}/pp-lc.webp`}
+                alt="PP Live"
+                loading="lazy"
+                onClick={() => navigate("/game/pp-live")}
+                className="px-1 py-1 press"
+                style={{ cursor: "pointer", height: "auto", borderRadius: "0.8rem" }}
+              />
+            </div>
+            <HotSection icon={`${BF_CDN}/smt223_hot_slot.png`} title="စလော့ ဂိမ်းများ" games={slotGames} />
+            <HotSection icon={`${BF_CDN}/smt223_hot_fishing.png`} title="ငါးပစ် ဂိမ်းများ" games={fishGames} />
+            <HotSection icon={`${BF_CDN}/smt223_hot_arcade.png`} title="အာကိတ် ဂိမ်းများ" games={arcadeGames} />
+          </>
+        )}
+
+        {tab === "fishing" && (
+          <div className="d-flex flex-wrap px-1 pt-2">
+            {FISH_NAV.map((p) => (
+              <img
+                key={p.id}
+                src={p.img}
+                alt={p.label}
+                loading="lazy"
+                onClick={() => navigate(`/game/${p.id}`)}
+                className="px-1"
+                style={{ cursor: "pointer", height: "auto", borderRadius: "0.8rem" }}
+              />
+            ))}
+            {fishGames.map((g, i) => (
+              <div key={`${g.gameID}-${i}`} className="col-3 px-1 my-2 rise-in">
+                <img
+                  src={imageLinkGenerate(g)}
+                  alt={g.gameName ?? g.name}
+                  loading="lazy"
+                  style={{ width: "100%", height: "auto", borderRadius: "10px" }}
+                />
+                <div className="text-[11px] text-white truncate mt-0.5 px-1">{g.gameName ?? g.name}</div>
+              </div>
             ))}
           </div>
+        )}
 
-          {/* Other authentic rooms — original live tiles + live APIs */}
-          <SectionTitle icon={Megaphone} title="အခန်းများ (Rooms)" />
-          <div className="grid grid-cols-4 gap-2.5 px-4">
-            {OTHER_ROOMS.map((r) => (
-              <Link key={r.id} href={`/rooms/${r.id}`} className="rise-in press relative block rounded-xl overflow-hidden bg-[#101830] gold-border">
-                <img src={r.img} alt={r.label} loading="lazy" className="w-full aspect-[3/4] object-cover" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2 pt-8 pb-1.5">
-                  <div className="text-center font-display font-bold text-[12px] text-[#ffd93c]">{r.label}</div>
-                </div>
-                <span className="absolute top-1.5 right-1.5 text-[13px] drop-shadow">🔥</span>
-              </Link>
+        {tab === "arcade" && (
+          <div className="flex flex-wrap px-1 pt-2">
+            {arcadeGames.map((g, i) => (
+              <div key={`${g.gameID}-${i}`} className="rise-in my-2 px-1" style={{ width: "23.5%", boxSizing: "border-box" }}>
+                <Link href={`/game/${gameRouteKey(g.provider)}/${encodeURIComponent(g.gameID)}`}>
+                  <img
+                    src={imageLinkGenerate(g)}
+                    alt={g.gameName ?? g.name}
+                    loading="lazy"
+                    className="w-100 press"
+                    style={{ cursor: "pointer", height: "auto", borderRadius: "0.8rem" }}
+                  />
+                  <div className="text-[11px] text-white truncate mt-0.5 px-1">{g.gameName ?? g.name}</div>
+                </Link>
+              </div>
             ))}
           </div>
+        )}
 
-          <SectionTitle icon={Zap} title="စလော့ ဂိမ်းများ" />
-          <GameRow games={slotGames} />
-
-          <SectionTitle icon={Sparkles} title="ဖဲ ဂိမ်းများ" />
-          <GameRow games={cardGames} />
-
-          <SectionTitle icon={Fish} title="ငါးပစ် ဂိမ်းများ" />
-          <GameRow games={fishGames} />
-        </>
-      )}
+        {tab === "slot" && (
+          <>
+            <div className="d-flex flex-wrap px-1 pt-2">
+              {SLOT_NAV.map((p) => (
+                <img
+                  key={p.id}
+                  src={p.img}
+                  alt={p.label}
+                  loading="lazy"
+                  onClick={() => navigate(`/game/${p.id}`)}
+                  className="px-1 py-1 press"
+                  style={{ cursor: "pointer", height: "auto", borderRadius: "0.8rem" }}
+                />
+              ))}
+            </div>
+            <HotSection icon={`${BF_CDN}/smt223_hot_slot.png`} title="စလော့ ဂိမ်းများ" games={slotGames} />
+          </>
+        )}
+      </div>
 
       {/* footer strip */}
       <div className="mx-4 mt-8 mb-4 rounded-xl bg-[#101830] gold-border px-4 py-3 flex items-center justify-between">

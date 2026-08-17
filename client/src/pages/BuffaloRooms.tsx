@@ -59,6 +59,15 @@ const CONFIG: Record<
       return getBuffaloData(false);
     },
   },
+  buffalo_new: {
+    title: "African Buffalo အသစ်",
+    subtitle: "African Buffalo အသစ် version",
+    tile: WELCOME_TILE,
+    fetch: (_u, refresh) => {
+      refresh();
+      return getBuffaloData(true);
+    },
+  },
   forest: {
     title: "ကျွဲနီလေးခန်း",
     subtitle: "",
