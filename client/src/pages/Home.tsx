@@ -95,10 +95,9 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ComponentType<{ size?
 
 /* ---------- game card ---------- */
 const PROVIDER_KEY: Record<string, string> = {
-  Jili: "jili", PGSoft: "pgsoft", FaChai: "fachai", Pragmatic: "pp", PP: "pp",
-  Buffalo: "buffalo", Joker: "joker", JOKER: "joker", KA: "ka", JDB: "jdb",
-  HotDog: "hotdog", Spade: "spade", Playstar: "playstar", AceWin: "acewin", "2J": "twj",
-  "5G": "fiveg",
+  Jili: "jili", Pragmatic: "pragmatic", PP: "pragmatic",
+  Joker: "joker", JOKER: "joker", JDB: "jdb",
+  HotDog: "hotdog", "2J": "twj", "5G": "fiveg", Buffalo: "buffalo",
 };
 
 function gameRouteKey(provider: string): string {
@@ -157,22 +156,27 @@ const CHIPS = [
 
 
 /* Provider strip under banner — like the original home navigation */
+// Original SPA provider values are case-sensitive (Jili, Pragmatic, HotDog, 2J, JDB...).
+// Only providers that actually have games on the backend are kept — the rest
+// returned 0 games and looked "fake".
 const PROVIDER_ROW = [
   { id: "jili", label: "JILI", emoji: "🐉" },
-  { id: "pp", label: "PP", emoji: "🎰" },
-  { id: "pgsoft", label: "PG", emoji: "🎲" },
-  { id: "fachai", label: "FaChai", emoji: "🧧" },
-  { id: "joker", label: "Joker", emoji: "🃏" },
-  { id: "ka", label: "KA", emoji: "⚡" },
-  { id: "jdb", label: "JDB", emoji: "🐯" },
+  { id: "pragmatic", label: "PP", emoji: "🎰" },
   { id: "hotdog", label: "HotDog", emoji: "🌭" },
+  { id: "joker", label: "Joker", emoji: "🃏" },
+  { id: "jdb", label: "JDB", emoji: "🐯" },
+  { id: "twj", label: "2J", emoji: "🎲" },
+  { id: "jili-fish", label: "ငါးပစ်", emoji: "🐟" },
+  { id: "jili-ac", label: "အာကိတ်", emoji: "🚀" },
 ];
 
 
 export default function Home() {
   const loggedIn = !!useAuth().user;
   const [, navigate] = useLocation();
-  const [hot, setHot] = useState<GameInfo[]>([]);
+  const [hotSlots, setHotSlots] = useState<GameInfo[]>([]);
+  const [hotFish, setHotFish] = useState<GameInfo[]>([]);
+  const [hotArcade, setHotArcade] = useState<GameInfo[]>([]);
   const [slotGames, setSlotGames] = useState<GameInfo[]>([]);
   const [fishGames, setFishGames] = useState<GameInfo[]>([]);
   const [arcadeGames, setArcadeGames] = useState<GameInfo[]>([]);
@@ -186,16 +190,30 @@ export default function Home() {
     done.current = true;
     (async () => {
       try {
-        const [h, live] = await Promise.all([getGames({ provider: undefined }), getHotGames()]);
-        const all: GameInfo[] = h?.data ?? [];
-        setHot(all.slice(0, 20));
-        setSlotGames(live?.data?.slotGames ?? []);
-        setFishGames(live?.data?.fishingGames ?? []);
-        setArcadeGames(live?.data?.arcadeGames ?? []);
-        const buffalo = all.filter((g) => /buffalo|buff|charge buffalo/.test(g.gameName.toLowerCase()));
-        const cards = all.filter((g) => String(g.gameTypeID).toLowerCase() === "bj" || String(g.gameTypeID).toLowerCase() === "sc");
-        setBuffaloGames(buffalo.length ? buffalo : all.slice(0, 8));
-        setCardGames(cards.length ? cards : all.filter((g) => String(g.gameTypeID) === "8").slice(0, 20));
+        const [live, all, fish, cards, buffalo] = await Promise.all([
+          getHotGames(),
+          getGames({ provider: "Pragmatic" }),
+          getGames({ type: "fish", provider: "Jili" }),
+          getGames({ provider: "Pragmatic" }),
+          getGames({}),
+        ]);
+        // Live /hot-games rows (original home: hot slots, hot fishing, hot arcade)
+        setHotSlots(live?.data?.slotGames ?? []);
+        setHotFish(live?.data?.fishingGames ?? []);
+        setHotArcade(live?.data?.arcadeGames ?? []);
+        // Full live lists — identical query to the original SPA (exact provider casing)
+        const allGames = (all?.data ?? []) as GameInfo[];
+        setSlotGames(allGames.filter((g) => !g.is_close && String(g.gameTypeID) === "vs"));
+        setFishGames((fish?.data ?? []).filter((g) => !g.is_close));
+        setCardGames(
+          ((cards?.data ?? []) as GameInfo[]).filter(
+            (g) => !g.is_close && ["bj", "sc"].includes(String(g.gameTypeID).toLowerCase())
+          )
+        );
+        const buf = ((buffalo?.data ?? []) as GameInfo[]).filter(
+          (g) => !g.is_close && /buffalo|buff|charge buffalo/i.test(g.gameName ?? "")
+        );
+        setBuffaloGames(buf.length ? buf : (all?.data ?? []).slice(0, 8));
       } catch (e) {
         toast.error("ဂိမ်းစာရင်း ရယူရာ မအောင်မြင်ပါ");
       }
@@ -205,7 +223,7 @@ export default function Home() {
   const visible = useMemo(() => {
     if (!chip) return null;
     switch (chip) {
-      case "hot": return { title: "နာမည်ကြီး ဂိမ်းများ", games: hot.slice(0, 20) };
+      case "hot": return { title: "နာမည်ကြီး ဂိမ်းများ", games: hotSlots.slice(0, 20) };
       case "buffalo": return { title: "ကျွဲဂိမ်းများ", games: buffaloGames };
       case "slot": return { title: "စလော့ ဂိမ်းများ", games: slotGames };
       case "card": return { title: "ဖဲ ဂိမ်းများ", games: cardGames };
@@ -213,7 +231,7 @@ export default function Home() {
       case "arcade": return { title: "အာကိတ် ဂိမ်းများ", games: arcadeGames };
       default: return null;
     }
-  }, [chip, hot, buffaloGames, slotGames, cardGames, fishGames, arcadeGames]);
+  }, [chip, hotSlots, buffaloGames, slotGames, cardGames, fishGames, arcadeGames]);
 
   return (
     <AppShell title="Buffalo688">
@@ -257,10 +275,10 @@ export default function Home() {
               const target: Record<string, string> = {
                 hot: "/",
                 buffalo: "/game/buffalo",
-                slot: "/game/pp",
+                slot: "/game/pragmatic",
                 card: "/game/card",
-                fish: "/game/jili",
-                arcade: "/game/jili",
+                fish: "/game/jili-fish",
+                arcade: "/game/jili-ac",
               };
               if (c.id === "hot") return setChip((v) => (v === c.id ? null : c.id));
               navigate(target[c.id] ?? "/");
@@ -290,8 +308,12 @@ export default function Home() {
 
       {!visible && (
         <>
-          <SectionTitle icon={Flame} title="နာမည်ကြီး ဂိမ်းများ" />
-          <GameRow games={hot} hot />
+          <SectionTitle icon={Flame} title="နာမည်ကြီး ဂိမ်းများ (Slots)" />
+          <GameRow games={hotSlots} hot />
+          <SectionTitle icon={Fish} title="နာမည်ကြီး ငါးပစ် ဂိမ်းများ" />
+          <GameRow games={hotFish} hot />
+          <SectionTitle icon={Rocket} title="နာမည်ကြီး အာကိတ် ဂိမ်းများ" />
+          <GameRow games={hotArcade} hot />
 
           {/* Authentic African Buffalo rooms — original live tiles + live APIs */}
           <SectionTitle icon={Crown} title="African Buffalo လေးခန်း" />
@@ -334,9 +356,6 @@ export default function Home() {
 
           <SectionTitle icon={Fish} title="ငါးပစ် ဂိမ်းများ" />
           <GameRow games={fishGames} />
-
-          <SectionTitle icon={Rocket} title="အာကိတ် ဂိမ်းများ" />
-          <GameRow games={arcadeGames} />
         </>
       )}
 

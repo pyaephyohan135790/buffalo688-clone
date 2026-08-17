@@ -33,7 +33,7 @@ export function getHotGames() {
   }>;
 }
 
-function getGames(params: { provider?: string } = {}): Promise<{ data?: GameInfo[] }> {
+function getGames(params: { provider?: string; type?: string } = {}): Promise<{ data?: GameInfo[] }> {
   return apiGetGames(params).catch(() => ({ data: [] })) as Promise<{ data?: GameInfo[] }>;
 }
 

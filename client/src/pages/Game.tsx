@@ -13,40 +13,36 @@ import { useAuth } from "@/contexts/AuthContext";
 import { imageLinkGenerate } from "@/pages/Home";
 import AppShell from "@/components/AppShell";
 
+// Route key → EXACT backend provider value. The backend query is case-sensitive
+// (verified in the live bundle: ?provider=Jili / Pragmatic / HotDog / 2J ...).
 const PROVIDERS: Record<string, string> = {
   jili: "Jili",
   buffalo: "Pragmatic",
   pp: "Pragmatic",
-  pg: "PGSoft",
-  ka: "KA",
-  spade: "Spade",
-  fachai: "FaChai",
-  joker: "JOKER",
+  pragmatic: "Pragmatic",
+  joker: "Joker",
   jdb: "JDB",
   hotdog: "HotDog",
-  playstar: "Playstar",
-  acewin: "AceWin",
   twj: "2J",
   fiveg: "5G",
-  card: "Card",
+  card: "Pragmatic",
+  "jili-fish": "Jili",
+  "jili-ac": "Jili",
 };
 
 const LABELS: Record<string, string> = {
   jili: "JILI ဂိမ်းများ",
   buffalo: "ကျွဲဂိမ်းများ",
   pp: "Pragmatic Play",
-  pg: "PG Soft ဂိမ်းများ",
-  ka: "KA Gaming",
-  spade: "Spade Gaming",
-  fachai: "Fa Chai",
+  pragmatic: "Pragmatic Play",
   joker: "Joker ဂိမ်းများ",
   jdb: "JDB ဂိမ်းများ",
   hotdog: "HotDog ဂိမ်းများ",
-  playstar: "PlayStar ဂိမ်းများ",
-  acewin: "AceWin ဂိမ်းများ",
   twj: "2J ဂိမ်းများ",
   fiveg: "5G ဂိမ်းများ",
   card: "ဖဲ ဂိမ်းများ",
+  "jili-fish": "ငါးပစ် ဂိမ်းများ",
+  "jili-ac": "အာကိတ် ဂိမ်းများ",
 };
 
 const BUFFALO_KEYS = ["bufking", "buf", "buffalo", "47charge", "crazybuffalo", "buffalowin"];
@@ -60,20 +56,21 @@ export default function Game() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   // Route → live API provider name (verified values: jili, pgsoft, fachai).
-  const apiName = useMemo(() => {
-    const key = String(provider).toLowerCase();
-    const map: Record<string, string> = {
-      slot: "pragmatic", slots: "pragmatic", jili: "jili", pg: "pgsoft", pgsoft: "pgsoft",
-      pp: "pragmatic", pragmatic: "pragmatic", fa: "fachai", fachai: "fachai", buffalo: "buffalo",
-      card: "card", bj: "card", fish: "fish",
-    };
-    return map[key] ?? (PROVIDERS[key] ?? provider);
+  // Route key → EXACT backend provider value used for GET /games?provider=
+  // AND for GET /games/url launch. Never normalize casing — the backend is
+  // case-sensitive.
+  const apiName = useMemo(() => PROVIDERS[String(provider).toLowerCase()] ?? "Jili", [provider]);
+  // Special pages: "jili-fish" sends type=fish, "jili-ac" sends gameTypeID=ac.
+  const apiTypeParam = useMemo(() => {
+    if (provider === "jili-fish") return "fish";
+    return undefined;
   }, [provider]);
-  // Does the API accept a provider filter for this route? Verified valid values: jili, fachai, pgsoft, pragmatic.
-  const apiProviderParam = useMemo(
-    () => (["jili", "fachai", "pgsoft", "pragmatic"].includes(apiName.toLowerCase()) ? apiName : undefined),
-    [apiName]
-  );
+  const apiTypeIDParam = useMemo(() => {
+    if (provider === "jili-ac") return "ac";
+    return undefined;
+  }, [provider]);
+  // Card page lists Pragmatic bj + sc games only.
+  const isCardPage = provider === "card";
 
   const [games, setGames] = useState<GameInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,18 +91,17 @@ export default function Game() {
                 (g) => !g.is_close && (isBuffaloGame(g) || /charge buffalo/i.test(g.gameName ?? ""))
               )
             )
-        : apiName === "Card"
-          ? getGames({}).then((res) =>
-              (res?.data ?? []).filter(
-                (g: GameInfo) => !g.is_close && ["bj", "sc"].includes(String(g.gameTypeID).toLowerCase())
+        : isCardPage
+          ? getGames({ provider: apiName }).then((res) =>
+              ((res?.data ?? []) as GameInfo[]).filter(
+                (g) => !g.is_close && ["bj", "sc"].includes(String(g.gameTypeID).toLowerCase())
               )
             )
-        : apiName === "fish"
-          ? getGames({}).then((res) =>
-              (res?.data ?? []).filter((g: GameInfo) => !g.is_close && /fish/i.test(g.gameName ?? ""))
-            )
-          : getGames(apiProviderParam ? { provider: apiProviderParam } : {})
-              .then((res) => (res?.data ?? []).filter((g: GameInfo) => !g.is_close));
+          : getGames({
+              ...(apiTypeParam ? { type: apiTypeParam } : {}),
+              ...(apiTypeIDParam ? { gameTypeID: apiTypeIDParam } : {}),
+              provider: apiName,
+            }).then((res) => ((res?.data ?? []) as GameInfo[]).filter((g) => !g.is_close));
     load
       .then((list: GameInfo[]) => {
         setGames(list);
@@ -113,7 +109,7 @@ export default function Game() {
       })
       .catch(() => setError("Server နှင့် ချိတ်ဆက်မရပါ"))
       .finally(() => setLoading(false));
-  }, [apiName, apiProviderParam, provider]);
+  }, [apiName, apiTypeParam, apiTypeIDParam, isCardPage, provider]);
 
   const target = useMemo(() => {
     if (!gameKey) return null;
@@ -144,10 +140,9 @@ export default function Game() {
       // exact casing ("Jili", "Pragmatic", "PGSoft"...). Never send a normalized
       // lowercase name — the backend maps the wrong game otherwise (e.g. /game/jili
       // clicked → Pragmatic URL returned). Rewrite rules identical to original:
-      // "Buffalo"===provider && 47===gameID → "Jili"; "FatPanda" → "Pragmatic".
+      // "FatPanda" → "Pragmatic" (original bundle rule).
       let launchProvider: string = g.provider;
       if (String(g.provider).toLowerCase() === "fatpanda") launchProvider = "Pragmatic";
-      if (String(g.provider).toLowerCase() === "buffalo" || g.gameID === "47") launchProvider = "Jili";
       const res = await getGameUrl({ gameID: g.gameID, provider: launchProvider, userId: user?.id });
       const url = res?.data?.gameUrl ?? res?.data?.gameURL ?? null;
       if (url) {

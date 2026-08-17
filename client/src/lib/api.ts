@@ -177,7 +177,7 @@ export function transferWallet(targetUser: string, amount: number, password: str
 
 // ---------- Games (live from Buffalo688 backend) ----------
 
-export function getGames(params: { provider?: string } = {}) {
+export function getGames(params: { provider?: string; type?: string } = {}) {
   const qs = Object.entries(params)
     .filter(([, v]) => v != null)
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
